@@ -7,8 +7,11 @@ Governance and documentation live in [`multi-tour-docs`](https://github.com/code
 
 ## What it is
 
-Job 1 of ADR-004 D3 (HU-WRK-001): it expires the reservations whose payment, balance or difference deadline was reached, by asking `commercial-reservation`
-through its internal routes. It has no database and exposes only `/health`. This piece is the skeleton: module, common files, CI, configuration and health.
+Job 1 of ADR-004 D3 (HU-WRK-001). Every minute, for each tenant it sweeps, it asks `commercial-reservation` for the payment, balance and difference
+deadlines that were reached (`GET .../internal/tenants/{tenantId}/payment-deadlines?due=true`) and asks it to expire each reservation
+(`POST .../reservations/{reservationId}/expiry`, with an `Idempotency-Key`). The service decides: it cancels for non-payment and releases the seat, and
+it refuses by itself when the departure started, a proof is in validation, the deadline is frozen or the tenant is inactive (HU-COM-011, HU-COM-020). The
+worker holds no deadline rule, has no database and exposes only `/health`.
 
 ## How to start it
 
@@ -21,8 +24,9 @@ start and a bad variable stops the worker naming it.
 
 ## What is missing
 
-The job itself (list the due deadlines and ask for each expiry) is the next piece. The tenants come from `TENANT_IDS` because no service route lists them
-for a `SERVICE` token.
+- The tenants come from `TENANT_IDS`: no service route lists them for a `SERVICE` token (`GET /tenants` of `identity-audit` is for the Platform Administrator).
+  How the job lists the tenants is open (DP-08 of the spec of HU-COM-011).
+- Tested against a stub of the contract, not against the running api.
 
 ## Branching
 
