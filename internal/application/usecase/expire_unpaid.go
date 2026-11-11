@@ -21,6 +21,7 @@ const maxPageSize = 100
 type ExpireUnpaid struct {
 	reservations out.Reservations
 	tenants      []string
+	source       out.Tenants
 	log          *slog.Logger
 }
 
@@ -37,7 +38,11 @@ func (*ExpireUnpaid) Name() string { return "payment-expiry" }
 // Run takes at most batch due reservations of each tenant (the list is capped at the page limit). What it expires leaves the list,
 // so what does not fit waits for the next run.
 func (j *ExpireUnpaid) Run(ctx context.Context, batch int) (processed, failed int) {
-	for _, tenant := range j.tenants {
+	tenants, ok := j.sweepTenants(ctx)
+	if !ok {
+		return 0, 1
+	}
+	for _, tenant := range tenants {
 		if ctx.Err() != nil {
 			break
 		}
@@ -69,4 +74,24 @@ func (j *ExpireUnpaid) expire(ctx context.Context, tenant string, d out.Deadline
 	}
 	j.log.InfoContext(ctx, "reservation not expired by the service", "tenantId", tenant, "reservationId", d.ReservationID, "reason", outcome.Reason)
 	return nil
+}
+
+// WithTenantSource lets the job ask for the tenants at each run when none are configured; TENANT_IDS stays the fallback and wins when set.
+func (j *ExpireUnpaid) WithTenantSource(source out.Tenants) *ExpireUnpaid {
+	j.source = source
+	return j
+}
+
+// sweepTenants is the configured list, or the active tenants of the service when there is none. A list that cannot be read counts as one
+// failure and sweeps nothing: the next run asks again.
+func (j *ExpireUnpaid) sweepTenants(ctx context.Context) ([]string, bool) {
+	if len(j.tenants) > 0 || j.source == nil {
+		return j.tenants, true
+	}
+	ids, err := j.source.ListActive(ctx)
+	if err != nil {
+		j.log.WarnContext(ctx, "the active tenants could not be listed, the next run asks again", "error", err)
+		return nil, false
+	}
+	return ids, true
 }

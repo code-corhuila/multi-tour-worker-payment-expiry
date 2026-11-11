@@ -15,7 +15,7 @@ worker holds no deadline rule, has no database and exposes only `/health`.
 
 ## How to start it
 
-Copy `.env.example`, fill `SERVICE_TOKEN` (never versioned) and `TENANT_IDS`, and run `docker compose -f deploy/compose.yml up`. The configuration is read at
+Copy `.env.example`, fill `SERVICE_TOKEN` (never versioned) and, optionally, `TENANT_IDS`, and run `docker compose -f deploy/compose.yml up`. The configuration is read at
 start and a bad variable stops the worker naming it.
 
 ## How to test it
@@ -24,7 +24,7 @@ start and a bad variable stops the worker naming it.
 
 ## What is missing
 
-- The tenants come from `TENANT_IDS`: no service route lists them for a `SERVICE` token (`GET /tenants` of `identity-audit` is for the Platform Administrator).
+- The tenants: when `TENANT_IDS` is empty each run asks commercial-reservation for the active tenants (`GET /internal/tenants?status=ACTIVE`, the `SERVICE` token). `TENANT_IDS` stays as the fallback and wins when set (declared debt until the identity-audit route exists, HU-WRK-001 DP-08).
   How the job lists the tenants is open (DP-08 of the spec of HU-COM-011).
 - Tested against a stub of the contract, not against the running api.
 
