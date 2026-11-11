@@ -49,9 +49,13 @@ func LoadExpiry(getenv func(string) string) (Expiry, error) {
 	return d, nil
 }
 
-// tenantIDs reads the comma-separated list. The ids go into URL paths, so each one must be a UUID.
+// tenantIDs reads the comma-separated list. It is optional: empty means the job asks commercial-reservation for the active tenants at each run
+// (HU-WRK-001 DP-08) and TENANT_IDS is the fallback. The ids go into URL paths, so each one must be a UUID.
 func tenantIDs(raw string) ([]string, error) {
 	var ids []string
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
 	seen := map[string]bool{}
 	for _, part := range strings.Split(raw, ",") {
 		id := strings.ToLower(strings.TrimSpace(part))

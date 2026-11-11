@@ -45,6 +45,9 @@ func run() error {
 	reservations := httpclient.New(cfg.CommercialReservationURL, cfg.Runtime.ServiceToken,
 		httpclient.WithTimeout(cfg.Runtime.HTTPTimeout), httpclient.WithAttempts(cfg.Runtime.HTTPAttempts))
 	job := usecase.NewExpireUnpaid(reservationshttp.NewReservations(reservations), cfg.TenantIDs, log)
+	if len(cfg.TenantIDs) == 0 {
+		job.WithTenantSource(reservationshttp.NewTenants(reservations))
+	}
 	jobRunner, err := runner.New(job, runner.Options{Interval: cfg.Interval, BatchSize: cfg.Runtime.BatchSize,
 		RunTimeout: cfg.Runtime.RunTimeout, Logger: log})
 	if err != nil {
