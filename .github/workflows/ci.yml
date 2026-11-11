@@ -1,0 +1,39 @@
+name: ci
+
+# gofmt, go vet and go test. Pull requests toward develop and qa only. No schedule.
+on:
+  pull_request:
+    branches: [develop, qa]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test ./...
+      # The compose file must be valid; the token is a placeholder, nothing starts
+      - name: compose config
+        run: docker compose -f deploy/compose.yml config -q
+        env:
+          WORKER_PAYMENT_EXPIRY_SERVICE_TOKEN: ci-placeholder
+          COMMERCIAL_RESERVATION_BASE_URL: http://commercial-reservation-api:8083
+          TENANT_IDS: 00000000-0000-0000-0000-000000000001
+      # Catches a base image tag that does not exist; nothing is pushed
+      - name: docker build
+        run: docker build -f deploy/Dockerfile .
