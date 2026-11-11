@@ -64,7 +64,6 @@ func TestLoadExpiry_names_the_bad_variable_and_never_prints_a_value(t *testing.T
 	cases := map[string][]string{
 		"SERVICE_TOKEN":                   {"COMMERCIAL_RESERVATION_BASE_URL", "http://x:8083", "TENANT_IDS", tenantA},
 		"COMMERCIAL_RESERVATION_BASE_URL": {"SERVICE_TOKEN", "secret-token-value", "TENANT_IDS", tenantA},
-		"TENANT_IDS":                      {"SERVICE_TOKEN", "secret-token-value", "COMMERCIAL_RESERVATION_BASE_URL", "http://x:8083"},
 		"EXPIRY_INTERVAL":                 with("EXPIRY_INTERVAL", "soon"),
 	}
 	for name, pairs := range cases {
@@ -93,5 +92,22 @@ func TestLoadExpiry_refuses_a_base_url_with_a_path_or_credentials(t *testing.T) 
 		if _, err := config.LoadExpiry(env(with("COMMERCIAL_RESERVATION_BASE_URL", bad)...)); err == nil {
 			t.Errorf("url %q was accepted", bad)
 		}
+	}
+}
+
+// HU-WRK-001 DP-08: TENANT_IDS is optional. Empty means the tenants come from the service at each run; a malformed one still stops the worker.
+func TestTenantIDs_empty_leaves_the_list_to_the_service(t *testing.T) {
+	got, err := config.LoadExpiry(env("SERVICE_TOKEN", "secret-token-value", "COMMERCIAL_RESERVATION_BASE_URL", "http://x:8083", "TENANT_IDS", " "))
+
+	if err != nil || len(got.TenantIDs) != 0 {
+		t.Fatalf("got %v, %v", got.TenantIDs, err)
+	}
+}
+
+func TestTenantIDs_malformed_still_stops_the_worker_naming_the_variable(t *testing.T) {
+	_, err := config.LoadExpiry(env(with("TENANT_IDS", "not-a-uuid")...))
+
+	if err == nil || !strings.Contains(err.Error(), "TENANT_IDS") {
+		t.Errorf("error = %v", err)
 	}
 }
