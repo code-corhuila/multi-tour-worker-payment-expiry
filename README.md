@@ -25,7 +25,6 @@ start and a bad variable stops the worker naming it.
 ## What is missing
 
 - The tenants: when `TENANT_IDS` is empty each run asks commercial-reservation for the active tenants (`GET /internal/tenants?status=ACTIVE`, the `SERVICE` token). `TENANT_IDS` stays as the fallback and wins when set (declared debt until the identity-audit route exists, HU-WRK-001 DP-08).
-  How the job lists the tenants is open (DP-08 of the spec of HU-COM-011).
 - Tested against a stub of the contract, not against the running api.
 
 ## Branching
